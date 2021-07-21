@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Lilita+One&display=swap');
+// font-family: 'Anton', sans-serif;
+// font-family: 'Lilita One', cursive;
+
+$background-url: './color_orbs.jpg';
+$background: #e2e2e2;
+$accent: #272727;
+
+
+.Login-Page {
+    height: 100vh;
+    width: 100vw;
+    background-image: url($background-url);
+    background-size: 100% 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Lilita One', cursive;
+    font-size: 1.5rem;
+
+    .login-box {
+        background-color: $background;
+        position: absolute;
+        margin: auto auto;
+        border-radius: 8px;
+        border: 1px solid $accent;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        opacity: 80%;
+
+        p {
+            padding: 0.5rem;
+            margin: 0.5rem;
+        }
+        
+        input {
+            padding: 0.5rem 0 0 0;
+            margin: 1rem;
+            background-color: $background;
+            border: none;
+            border-bottom: 1px solid $accent;
+            padding: 2px;
+            outline: none;
+        }
+
+        #verify_password {
+            height: 0;
+            opacity: 0%;
+            display: none;
+            transition: all 0.5s;
+            border-bottom: 1px solid red;
+
+            &.show {
+                display: block;
+                height: auto;
+                opacity: inherit;
+            }
+
+            &.verified {
+                border-bottom: 1px solid green;
+            }
+        }
+
+        .submit {
+            padding: 0.5rem;
+            margin: 0.5rem;
+            background-color: $accent;
+            color: $background;
+            border-radius: 8px;
+            text-align: center;
+            font: inherit;
+        }
+    }
+}
