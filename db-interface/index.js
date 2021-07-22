@@ -30,6 +30,14 @@ app.get('/db/checkuser', (req, res) => {
     })
 });
 
+app.get('/db/getpwdhash', (req, res) => {
+    const q = "SELECT PasswordHash FROM Users WHERE UserName=?";
+    db.query(q, req.query.username, (err, result) => {
+        console.log(result);
+        res.send(result)
+    })
+});
+
 app.listen(3002, () => {
     console.log("db connected on port 3002");
 });
