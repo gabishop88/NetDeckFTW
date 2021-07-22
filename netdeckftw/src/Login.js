@@ -14,7 +14,6 @@ function Login(state) {
         Axios.get(url + '/db/checkuser?username=' + e.target.value).then((response) => {
             setUserMatch(response.data.length);
             var button = document.getElementById('login_submit');
-            console.log(button.innerHTML);
             if (response.data.length === 0) {
                 button.innerHTML = "Sign Up";
             } else {
@@ -45,34 +44,40 @@ function Login(state) {
 
     function submitLogin(e) {
         var elems = e.target.parentElement.children;
-        var username = elems[0].value;
-        var password = elems[1].value;
+        var username = elems[1].value;
+        var password = elems[2].value;
         if (username.length === 0 || password.length === 0) {
-            // Error: You must have a username and password
-        } else if (elems[2].value !== password) {
-            // Error: Passwords must match
+            console.log("Username and Password cannot be empty.")
+        } else if (!userMatch && elems[3].value !== password) {
+            console.log("Passwords must match.");
         } else {
             if (userMatch) {
                 Axios.get(url + '/db/getpwdhash?username=' + username).then((response) => {
-                    console.log(response);
-                    // bcrypt.compare(password, reponse, (err, result) => {
-                    //     if (result) {
-                    //         // Verified, Log in
-                    //     } else {
-                    //         // Incorrect Password
-                    //     }
-                    // });
+                    bcrypt.compare(password, response.data, (err, result) => {
+                        if (result) {
+                            console.log("Logged In");
+                            state.setUserName(username);
+                            username = password = '';
+                        } else {
+                            console.log("Incorrect Password");
+                        }
+                    });
                 });
             } else {
+                console.log("Adding new user.");
                 bcrypt.hash(password, saltRounds, (err, hash) => {
-                    // Axios.post();
+                    Axios.post(url + '/db/adduser/', {username: username, passwordHash: hash}).then(response => {
+                        state.setUserName(response.data);
+                        username = password = '';
+                    });
                 });
             }
         }
+        elems[3].value = '';
     }
 
 // Fix how to show the password boxes. Need something easy, intuitive, uninvasive, and mobile friendly
-    console.log(state)
+// later, make sure to offer adding a recovery email to the user entry
     return state.userName === "" ?
     (
         <div className='Login-Page'>

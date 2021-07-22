@@ -1,0 +1,19 @@
+.Home {
+    height: 100vh;
+
+    .layout {
+        display: flex;
+        justify-content: space-between;
+        height: 100%;
+
+        .flex-col {
+            border: 1px solid red;
+            flex-grow: 1;
+            // margin: 1rem;
+        }
+
+        .workspace {
+            flex-grow: 2;
+        }
+    }
+}
