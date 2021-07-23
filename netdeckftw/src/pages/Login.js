@@ -12,9 +12,9 @@ function Login(state) {
 
     function changeUsername(e) {
         Axios.get(url + '/db/checkuser?username=' + e.target.value).then((response) => {
-            setUserMatch(response.data.length);
+            setUserMatch(response.length);
             var button = document.getElementById('login_submit');
-            if (response.data.length === 0) {
+            if (response.length === 0) {
                 button.innerHTML = "Sign Up";
             } else {
                 button.innerHTML = "Log In";

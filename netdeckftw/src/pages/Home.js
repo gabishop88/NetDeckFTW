@@ -18,10 +18,9 @@ function Home(state) {
 
         Axios.post(url + '/db/cardsearch', {name: cardName.replaceAll(/'/ig, "''")}).then(result => {
             setCardResults(result.data);
-            console.log(cardResults);
         });
     }
-    updateCardList(null);
+    if (cardResults.length === 0) updateCardList(null);
 
     return state.userName === '' ? 
     (
@@ -45,10 +44,11 @@ function Home(state) {
                     </div>
                 </div>
                 <div className='workspace flex-col'>
-                    <div className='displayCards'>
-                        
+                    <div className='display-cards'>
+                        Something
                     </div>
-                    <div className='owned-stuff'>
+                    <div className='owned-groups'>
+                        <p>Something else</p>
                         <ul className='owned-decks'>
                             {
                                 ownedDecks.map(deck => {
@@ -60,8 +60,8 @@ function Home(state) {
                         </ul>
                     </div>
                 </div>
-                <div className='extrasPanel flex-col'>
-
+                <div className='extras-panel flex-col'>
+                    <p>Usage TBD</p>
                 </div>
             </div>
         </div>

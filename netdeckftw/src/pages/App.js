@@ -11,6 +11,7 @@ import {
 
 function App() {
   const [userName, setUserName] = useState('');
+  // Try creating an error state var with an animation so that maybe it shows whenever it is updated?
 
   return (
     <div className="Application">
