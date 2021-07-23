@@ -1,4 +1,4 @@
-import './Login.scss'
+import '../stylesheets/Login.scss'
 import React, { useState } from 'react';
 import Axios from 'axios';
 import { Redirect } from "react-router-dom";
@@ -43,6 +43,8 @@ function Login(state) {
     }
 
     function submitLogin(e) {
+        state.setUserName('Graham');
+        return;
         var elems = e.target.parentElement.children;
         var username = elems[1].value;
         var password = elems[2].value;
@@ -78,6 +80,7 @@ function Login(state) {
 
 // Fix how to show the password boxes. Need something easy, intuitive, uninvasive, and mobile friendly
 // later, make sure to offer adding a recovery email to the user entry
+// Change to a form not div, and use submit not button
     return state.userName === "" ?
     (
         <div className='Login-Page'>

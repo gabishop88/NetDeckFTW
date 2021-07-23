@@ -1,5 +1,5 @@
+import '../stylesheets/global.scss'
 import React, { useState } from 'react';
-import './App.css';
 import Login from './Login';
 import Home from './Home';
 import {

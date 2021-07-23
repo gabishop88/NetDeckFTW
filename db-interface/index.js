@@ -14,10 +14,11 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.get('/', (require, response) => {
+app.get('/', (req, res) => {
     const query = "SELECT COUNT(*) AS count FROM `Users`";
     db.query(query, (err, result) => {
-        response.send(result[0].count.toString());
+        if (err) res.send('<h1>Please start SQL database.</h1>');
+        else res.send('<h1>Database connected, server running.</h1>');
     })
 });
 
@@ -49,11 +50,17 @@ app.post('/db/adduser', (req, res) => {
 app.post('/db/cardsearch', (req, res) => {
     var q = 'SELECT CardName, ManaCost FROM CardDetails ';
     if ('name' in req.body) {
-        q = q.concat('WHERE CardName LIKE \'%' + req.body.name + '%\' ');
+        if (req.body.name === '') {
+            q = "SELECT CardName, ManaCost, COUNT(DetailID) AS num_cards FROM CardDetails NATURAL JOIN DeckContains GROUP BY DetailID ORDER BY num_cards DESC ";
+        } else {
+            q = q.concat('WHERE CardName LIKE \'%' + req.body.name + '%\' ');
+        }
     }
     q = q.concat('LIMIT 10');
 
-    // console.log(q);
+    res.send([{CardName: 'Festive Elf', ManaCost: '4{G}{G}'}, {CardName: 'Santa\'s Helper', ManaCost: '4{G}{G}'}, {CardName: 'Gift Horse', ManaCost: '{1}{G}'}]);
+    return;
+    
     db.query(q, [], (err, result) => {
         if (err) {
             console.log(err);
