@@ -7,9 +7,21 @@ const url = 'http://localhost:3002';
 function Home(state) {
     const [cardResults, setCardResults] = useState([]);
     const [ownedGroups, setOwnedGroups] = useState([]);
-    const [selectedGroup, setSelectedGroup] = useState({name: null, id: '', desc: '', cards: []});
+    const [selectedGroup, setSelectedGroup] = useState({name: null, id: 'none', desc: '', cards: [{'sideboard': []}]}); // Remap to cards: {locationA: [], ...}
     const [selectedGroupType, setSelectedGroupType] = useState('Decks');
     const [recommendations, setRecommendations] = useState([]);
+    const [dragging, setDragging] = useState('');
+
+    function sortCardsByLocation(cards) {
+        if (selectedGroupType === 'Collections') return cards;
+        let output = {};
+        for (var i in cards) {
+            if (!output.hasOwnProperty(cards[i].Location)) output[cards[i].Location] = [];
+            output[cards[i].Location].push(cards[i]);
+        }
+        if (!output.hasOwnProperty('sideboard')) output['sideboard'] = [];
+        if (Object.keys(output).length > 0) return [output];
+    }
 
     function updateCardList(e) {
         var cardName = '';
@@ -23,7 +35,7 @@ function Home(state) {
                 }
                 Axios.get(url + `/db/getrecommendations/${result.data[0].DetailID}?format=${format}`).then(result => {
                     console.log(result.data[0]);
-                    setRecommendations(result.data[0]);
+                    setRecommendations(result.data[0].slice(0, 20));
                 });
             }
         });
@@ -47,12 +59,13 @@ function Home(state) {
                     return; // Error messages?
                 }
                 Axios.get(url + '/db/groupcards?type=' + selectedGroupType + '&id=' + result.data[0].id).then(res2 => {
-                    setSelectedGroup({name: result.data[0].name, id: result.data[0].id, desc: result.data[0].desc, cards: res2.data});
+                    setSelectedGroup({name: result.data[0].name, id: result.data[0].id, desc: result.data[0].desc, cards: sortCardsByLocation(res2.data)});
                 });
             });
         } else {
             Axios.get(url + '/db/groupcards?type=' + selectedGroupType + '&id=' + group.id).then(result => {
-                setSelectedGroup({name: group.name, id: group.id, desc: group.desc, cards: result.data});
+                console.log(result.data);
+                setSelectedGroup({name: group.name, id: group.id, desc: group.desc, cards: sortCardsByLocation(result.data)});
             });
         }
     }
@@ -71,8 +84,27 @@ function Home(state) {
     function deleteGroup(id) {
         // Eventually maybe have a confirmation?
         Axios.delete(url + `/db/deletegroup/${id}?type=${selectedGroupType}`).then(result => {
-            if (result.data === "Done") setSelectedGroup({name: null, id: '', desc: '', cards: []});
+            if (result.data === "Done") setSelectedGroup({name: null, id: '', desc: '', cards: sortCardsByLocation([])});
         });
+    }
+
+    function dragCard(e) {
+        e.preventDefault();
+        var card = e.target.innerText;
+        if (dragging !== card) setDragging(card);
+        // console.log(e); // Maybe show a better drag card thing
+    }
+
+    function addCard(loc = null) {
+        // console.log(dragging, e.target);
+        var options = {CardName: dragging};
+        if (loc) options['location'] = loc;
+        if (dragging !== '') {
+            Axios.post(`${url}/db/addcard/${selectedGroup.id}?type=${selectedGroupType}`, options).then(result => {
+                selectGroup(selectedGroup);
+                console.log(result.data);
+            });
+        }
     }
 
     return state.userName === '' ? 
@@ -86,7 +118,7 @@ function Home(state) {
                         {
                             cardResults.map((elem) => {
                                 return (
-                                    <li key={elem.DetailID}>{elem.CardName}</li>
+                                    <li key={elem.DetailID} draggable='true' onDrag={e => dragCard(e)}>{elem.CardName}</li>
                                 );
                             })
                         }
@@ -97,9 +129,47 @@ function Home(state) {
                     </div>
                 </div>
                 <div className='workspace flex-col'>
-                    <div className='display-cards'>
+                    <div className='deck-info'>
                         <input type='text' value={selectedGroup.name != null ? selectedGroup.name : 'None Selected'} readOnly={selectedGroup.name == null} onChange={e => {updateGroup({name: e.target.value})}}></input>
-                        <button onClick={e => deleteGroup(selectedGroup.id)}>DELETE</button>
+                        {
+                            selectedGroup.name != null ? <button onClick={e => deleteGroup(selectedGroup.id)}>DELETE</button> : ''
+                        }
+                        
+                    </div>
+                    <div className='display-cards'> {/* TODO: Make sure to wrap this with an if to support Collections (just list selectedGroup.cards.map)*/}
+                        <div className='main-board' onDrop={e => addCard()} onDragOver={e => e.preventDefault()}>
+                            {
+                                Object.keys(selectedGroup.cards[0]).map(loc => {
+                                    if (loc !== 'sideboard' && loc !== '') return (
+                                        <div className='location'>
+                                            <h4 clasName='location-title'>{loc}</h4>
+                                            {
+                                                selectedGroup.cards[0][loc].map(card => {
+                                                    return (
+                                                        <div className='display-card' key={card.DetailID}>
+                                                            <p>{card.Quantity}x {card.CardName}</p>
+                                                        </div>
+                                                    );
+                                                })
+                                            }
+                                        </div>
+                                        );
+                                    else return '';
+                                })
+                            }
+                        </div>
+                        <div className='sideboard' onDrop={e => addCard('sideboard')} onDragOver={e => e.preventDefault()}>
+                            <h3>Sideboard</h3>
+                            {
+                                selectedGroup.cards[0].sideboard.map(card => {
+                                    return (
+                                        <div className='display-card' key={card.DetailID}>
+                                            <p>{card.Quantity}x {card.CardName}</p>
+                                        </div>
+                                    );
+                                })
+                            }
+                        </div>
                     </div>
                     <div className='owned'>
                         <div className='type-selection'>

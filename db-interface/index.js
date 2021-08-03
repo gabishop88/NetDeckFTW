@@ -98,9 +98,9 @@ app.get('/db/groupcards', (req, res) => {
     var id = req.query.id;
     var q = '';
     if (req.query.type == 'Decks') {
-        q = "SELECT DetailID as id, Quantity AS qty, Location AS loc FROM DeckContains WHERE DeckID=?";
+        q = "SELECT CardName, DetailID, Quantity, Location FROM DeckContains NATURAL JOIN CardDetails WHERE DeckID=?";
     } else if (req.query.type == 'Collections') {
-        q = "SELECT CardID as id, Quantity AS qty, Foil AS foil FROM CollectionContains WHERE CollectionID=?";
+        q = "SELECT CardName, CardID, Quantity, Foil FROM CollectionContains NATURAL JOIN Cards NATURAL JOIN CardDetails WHERE CollectionID=?";
     }
     db.query(q, [id], (err, result) => {
         if (err) res.send([]);
@@ -123,7 +123,6 @@ app.post('/db/updategroup', (req, res) => {
         var str = '';
         Object.keys(req.body).forEach(i => str = str.concat(translator[i], "='", req.body[i], "', "));
         q = q.replace('ATTRIBUTES', str.slice(0, -2));
-        console.log(q, req.query.id);
         db.query(q, [req.query.id], (err, result) => {
             if (err) res.send("Update Failed");
             else res.send("Updated");
@@ -155,8 +154,6 @@ app.post('/db/addgroup', (req, res) => {
         if (err) res.send("Creation Failed");
         else {
             db.query(`SELECT ${type}ID AS id, ${type}Name AS name, Description AS 'desc' FROM ${type}s WHERE ${type}ID=?`, [groupid], (err, result) => {
-                console.log(err);
-                console.log(result);
                 res.send(result);
             });
         }
@@ -173,6 +170,7 @@ app.delete('/db/deletegroup/:groupid', (req, res) => {
     });
 });
 
+// TODO : add a deck id option so that it can filter the results based on the deck
 app.get('/db/getrecommendations/:detailID', (req, res) => {
     var id = req.params.detailID;
     var format = req.query.format;
@@ -181,6 +179,47 @@ app.get('/db/getrecommendations/:detailID', (req, res) => {
         if (err) res.send([]);
         else res.send(result);
     });
+});
+
+app.post('/db/addcard/:groupID', (req, res) => {
+    const types = ['Creature', 'Land', 'Artifact', 'Enchantment', 'Instant', 'Sorcery', 'Planeswalker'];
+    var groupid = req.params.groupID;
+    if(groupid === 'none') {
+        res.send('No Group Selected');
+        return;
+    }
+    var cardname = req.body.CardName;
+    var type = req.query.type;
+    if (type === 'Decks') {
+        const q = 'SELECT CardName, DetailID, `Type`, MAX(Quantity) AS Quantity FROM (SELECT CardName, DetailID, `Type`, 0 AS Quantity FROM CardDetails UNION SELECT CardName, DetailID, `Type`, Quantity FROM DeckContains NATURAL JOIN CardDetails WHERE DeckID=?) as temp WHERE CardName=? GROUP BY CardName, DetailID, `Type`;';
+        db.query(q, [groupid, cardname], (err, result) => {
+            if (err) res.send(err);
+            else {
+                var quantity = result[0].Quantity + 1;
+                var detailID = result[0].DetailID;
+                var type = result[0].Type;
+                type = types.find(t => type.includes(t));
+                if (req.body.hasOwnProperty('location')) {
+                    type = req.body.location;
+                } 
+                var query = '';
+                if (quantity === 1) {
+                    query = `INSERT IGNORE INTO DeckContains() VALUES('${groupid}', '${detailID}', ${quantity}, '${type}')`;
+                } else {
+                    query = `UPDATE DeckContains SET Quantity = ${quantity} where DeckID='${groupid}' and DetailID='${detailID}' AND Location='${type}';`;
+                }
+                db.query(query, [], (err, result) => {
+                    if (err) res.send('Could not add card');
+                    else res.send('Update Successful');
+                });
+            }
+        });
+    } else if (type === 'Collections') {
+        // TODO; add ability to choose which card after the fact?
+        // Here, we can probably just add a default version
+        res.send('Collections WIP');
+    }
+    
 });
 
 /** ========== Start Server ========== */
