@@ -8,8 +8,6 @@ $accent: #a2a2a2;
     position: relative;
     height: 100vh;
     width: 100%;
-    display: flex;
-    align-items: center;
     justify-content: center;
     background-image: url('../public/eldrazi-background-transparent.png');
     background-size: 100% 100%;
@@ -117,6 +115,14 @@ $accent: #a2a2a2;
                     border-radius: 0.5rem;
                     background-color: #ddda;
                     box-shadow: 3px 3px 10px #bbb;
+                }
+
+                .collection-cards {
+                    flex-grow: 1;
+                    display: flex;
+                    flex-direction: column;
+                    flex-wrap: wrap;
+                    margin: 0.5rem;
                 }
             }
 

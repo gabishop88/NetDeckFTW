@@ -9,7 +9,6 @@ function Home(state) {
     const [cardResults, setCardResults] = useState([]);
     const [cardResultsLimit, setCardResultsLimit] = useState(15);
     const [ownedGroups, setOwnedGroups] = useState([]);
-    const [selectedGroup, setSelectedGroup] = useState({name: null, id: 'none', desc: '', cards: [{'sideboard': []}]});
     const [selectedGroupType, setSelectedGroupType] = useState('Decks');
     const [recommendations, setRecommendations] = useState([]);
     const [dragging, setDragging] = useState('');
@@ -23,9 +22,11 @@ function Home(state) {
             output[cards[i].Location].push(cards[i]);
         }
         if (!output.hasOwnProperty('sideboard')) output['sideboard'] = [];
-        console.log(output);
         return [output];
     }
+
+    const defaultSelection = {name: null, id: 'none', desc: '', cards: sortCardsByLocation([])};
+    const [selectedGroup, setSelectedGroup] = useState(defaultSelection);
 
     function updateCardList(e) {
         var cardName = '';
@@ -74,6 +75,11 @@ function Home(state) {
         }
     }
 
+    function switchSelected() {
+        setSelectedGroupType(selectedGroupType === 'Decks' ? 'Collections' : 'Decks');
+        setSelectedGroup(defaultSelection);
+    }
+
     function updateGroup(change) {
         console.log(change);
         Axios.post(url + '/db/updategroup?type=' + selectedGroupType + '&id=' + selectedGroup.id, change).then(result => {
@@ -89,30 +95,37 @@ function Home(state) {
     function deleteGroup(id) {
         // Eventually maybe have a confirmation?
         Axios.delete(url + `/db/deletegroup/${id}?type=${selectedGroupType}`).then(result => {
-            if (result.data === "Done") setSelectedGroup({name: null, id: '', desc: '', cards: sortCardsByLocation([])});
+            if (result.data === "Done") setSelectedGroup(defaultSelection);
         });
     }
 
     function dragCard(e) {
         e.preventDefault();
-        var card = e.target.innerText;
+        var card = e.target.dataset.cardid;
         if (dragging !== card) setDragging(card);
         // console.log(e); // Maybe show a better drag card thing
     }
 
     function addCard(loc = null) {
         // console.log(dragging, e.target);
-        var options = {CardName: dragging};
+        var options = {};
         if (loc) options['location'] = loc;
         if (dragging !== '') {
-            Axios.post(`${url}/db/addcard/${selectedGroup.id}?type=${selectedGroupType}`, options).then(result => {
+            Axios.post(`${url}/db/addcard/${selectedGroup.id}/${dragging}?type=${selectedGroupType}`, options).then(result => {
                 selectGroup(selectedGroup);
-                console.log(result.data);
             });
         }
     }
 
-    function hoverCard(e) {
+    function removeCard() {
+        if (dragging !== '') {
+            Axios.delete(`${url}/db/removecard/${selectedGroup.id}/${dragging}?type=${selectedGroupType}`).then(result => {
+                selectGroup(selectedGroup);
+            });
+        }
+    }
+
+    function moveCard(loc = null) {
         
     }
 
@@ -124,11 +137,11 @@ function Home(state) {
             <div className='layout'>
                 <div className='card-search flex-col'>
                     <div></div>
-                    <ul className='card-results'>
+                    <ul className='card-results' onDrop={e => removeCard()} onDragOver={e => e.preventDefault()}>
                         {
                             cardResults.slice(0, cardResultsLimit).map(elem => {
                                 return (
-                                    <li key={elem.DetailID} draggable='true' onDrag={e => dragCard(e)} onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={elem.MultiverseID}>{elem.CardName}</li>
+                                    <li key={elem.DetailID} draggable='true' onDrag={e => dragCard(e)} onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={elem.MultiverseID} data-cardid={elem.DetailID}>{elem.CardName}</li>
                                 );
                             })
                         }
@@ -136,7 +149,7 @@ function Home(state) {
                     <div className='search-options'>
                         <input id='search_cardname' type='text' placeholder='Card Name' onChange={updateCardList}></input>
                         <div className='result-limit'>
-                            <input type='number' value={cardResultsLimit} onChange={e => setCardResultsLimit(e.target.value)}></input>
+                            <input type='number' value={cardResultsLimit} onChange={e => setCardResultsLimit(Math.max(0, e.target.value))}></input>
                             <p>{' Results'}</p>
                         </div>
                     </div>
@@ -152,18 +165,18 @@ function Home(state) {
                     {
                         (selectedGroup.id !== 'none') ? (
                             selectedGroupType === 'Decks' ? (
-                                <div className='display-cards'> {/* TODO: Make sure to wrap this with an if to support Collections (just list selectedGroup.cards.map)*/}
+                                <div className='display-cards'>
                                     <div className='main-board' onDrop={e => addCard()} onDragOver={e => e.preventDefault()}>
                                         {
                                             Object.keys(selectedGroup.cards[0]).map(loc => {
                                                 if (loc !== 'sideboard' && loc !== '') return (
-                                                    <div className='location'>
+                                                    <div className='location' key={loc}>
                                                         <h4 className='location-title'>{loc}</h4>
                                                         {
                                                             selectedGroup.cards[0][loc].map(card => {
                                                                 return (
                                                                     <div className='display-card' key={card.DetailID}>
-                                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID}>{card.Quantity}x {card.CardName}</p>
+                                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID} data-cardid={card.DetailID} draggable='true' onDrag={e => dragCard(e)}>{card.Quantity}x {card.CardName}</p>
                                                                     </div>
                                                                 );
                                                             })
@@ -174,13 +187,13 @@ function Home(state) {
                                             })
                                         }
                                     </div>
-                                    <div className='sideboard' onDrop={e => addCard('sideboard')} onDragOver={e => e.preventDefault()}>
+                                    <div className='sideboard' onDrop={e => moveCard('sideboard')} onDragOver={e => e.preventDefault()}>
                                         <h4>Sideboard</h4>
                                         {
                                             selectedGroup.cards[0].sideboard.map(card => {
                                                 return (
                                                     <div className='display-card' key={card.DetailID}>
-                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID}>{card.Quantity}x {card.CardName}</p>
+                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID} data-cardid={card.DetailID} draggable='true' onDrag={e => dragCard(e)}>{card.Quantity}x {card.CardName}</p>
                                                     </div>
                                                 );
                                             })
@@ -188,14 +201,26 @@ function Home(state) {
                                     </div>
                                 </div>
                             ) : (
-                                <p> Collection Display </p>
+                                <div className='display-cards'>
+                                    <div className='collection-cards' onDrop={e => addCard()} onDragOver={e => e.preventDefault()}>
+                                        {
+                                            selectedGroup.cards.map(card => {
+                                                return (
+                                                    <div className='display-card' key={card.CardID}>
+                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID} data-cardid={card.CardID} draggable='true' onDrag={e => dragCard(e)}>{card.Quantity}x {card.CardName}</p>
+                                                    </div>
+                                                );
+                                            })
+                                        }
+                                    </div>
+                                </div>
                             )
                         ) : <p>Please select a Deck or Collection</p>
                     }
                     <div className='owned'>
                         <div className='type-selection'>
                             <p>{state.userName}'s </p>
-                            <p className='selected-group' onClick={e => setSelectedGroupType(selectedGroupType === 'Decks' ? 'Collections' : 'Decks')}>{selectedGroupType}</p>
+                            <p className='selected-group' onClick={e => switchSelected()}>{selectedGroupType}</p>
                         </div>
                         <div className='owned-groups'>
                             {

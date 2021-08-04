@@ -180,45 +180,43 @@ app.get('/db/getrecommendations/:detailID', (req, res) => {
     });
 });
 
-app.post('/db/addcard/:groupID', (req, res) => {
-    const types = ['Creature', 'Land', 'Artifact', 'Enchantment', 'Instant', 'Sorcery', 'Planeswalker'];
-    var groupid = req.params.groupID;
-    if(groupid === 'none') {
-        res.send('No Group Selected');
-        return;
-    }
-    var cardname = req.body.CardName;
+app.post('/db/addcard/:groupID/:card', (req, res) => {
     var type = req.query.type;
+    var cardid = req.params.card;
+    var groupid = req.params.groupID;
+    var loc = 'none';
+    if (req.body.hasOwnProperty('location')) {
+        loc = req.body.location;
+    } 
+    var q = '';
     if (type === 'Decks') {
-        const q = 'SELECT CardName, DetailID, `Type`, MAX(Quantity) AS Quantity FROM (SELECT CardName, DetailID, `Type`, 0 AS Quantity FROM CardDetails UNION SELECT CardName, DetailID, `Type`, Quantity FROM DeckContains NATURAL JOIN CardDetails WHERE DeckID=?) as temp WHERE CardName=? GROUP BY CardName, DetailID, `Type`;';
-        db.query(q, [groupid, cardname], (err, result) => {
-            if (err) res.send(err);
-            else {
-                var quantity = result[0].Quantity + 1;
-                var detailID = result[0].DetailID;
-                var type = result[0].Type;
-                type = types.find(t => type.includes(t));
-                if (req.body.hasOwnProperty('location')) {
-                    type = req.body.location;
-                } 
-                var query = '';
-                if (quantity === 1) {
-                    query = `INSERT IGNORE INTO DeckContains() VALUES('${groupid}', '${detailID}', ${quantity}, '${type}')`;
-                } else {
-                    query = `UPDATE DeckContains SET Quantity = ${quantity} where DeckID='${groupid}' and DetailID='${detailID}' AND Location='${type}';`;
-                }
-                db.query(query, [], (err, result) => {
-                    if (err) res.send('Could not add card');
-                    else res.send('Update Successful');
-                });
-            }
-        });
+        q = `CALL ins_deck_det_ID(?, ?, '${loc}')`;
     } else if (type === 'Collections') {
-        // TODO; add ability to choose which card after the fact?
-        // Here, we can probably just add a default version
-        res.send('Collections WIP');
+        q = 'CALL ins_coll_cardID(?, ?)';
     }
-    
+    console.log(`Add ${cardid} to ${type} ${groupid} at ${loc}`);
+    if (q !== '') db.query(q, [groupid, cardid], (err, result) => {
+        if (err) res.send('Insert Failed');
+        else res.send('Insert Successful');
+    })
+});
+
+// app.post('/db/')
+
+app.delete('/db/removecard/:groupid/:card', (req, res) => {
+    var type = req.query.type;
+    var id = req.params.groupid;
+    var card = req.params.card;
+    var q = '';
+    if (type === 'Decks') {
+        q = 'CALL deck_rm_card(?, ?)';
+    } else if (type === 'Collections') {
+        q = 'CALL coll_rm_card(?, ?)';
+    }
+    if (q !== '') db.query(q, [id, card], (err, result) => {
+        if (err) res.send('Could not remove');
+        else res.send('Remove successful');
+    });
 });
 
 /** ========== Start Server ========== */
