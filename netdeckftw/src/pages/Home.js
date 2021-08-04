@@ -5,12 +5,15 @@ import Axios from "axios";
 const url = 'http://localhost:3002';
 
 function Home(state) {
+
     const [cardResults, setCardResults] = useState([]);
+    const [cardResultsLimit, setCardResultsLimit] = useState(15);
     const [ownedGroups, setOwnedGroups] = useState([]);
-    const [selectedGroup, setSelectedGroup] = useState({name: null, id: 'none', desc: '', cards: [{'sideboard': []}]}); // Remap to cards: {locationA: [], ...}
+    const [selectedGroup, setSelectedGroup] = useState({name: null, id: 'none', desc: '', cards: [{'sideboard': []}]});
     const [selectedGroupType, setSelectedGroupType] = useState('Decks');
     const [recommendations, setRecommendations] = useState([]);
     const [dragging, setDragging] = useState('');
+    const [hoveredImage, setHoveredImage] = useState('');
 
     function sortCardsByLocation(cards) {
         if (selectedGroupType === 'Collections') return cards;
@@ -20,7 +23,8 @@ function Home(state) {
             output[cards[i].Location].push(cards[i]);
         }
         if (!output.hasOwnProperty('sideboard')) output['sideboard'] = [];
-        if (Object.keys(output).length > 0) return [output];
+        console.log(output);
+        return [output];
     }
 
     function updateCardList(e) {
@@ -64,13 +68,14 @@ function Home(state) {
             });
         } else {
             Axios.get(url + '/db/groupcards?type=' + selectedGroupType + '&id=' + group.id).then(result => {
-                console.log(result.data);
+                console.log(`'${group.name}'`, result.data);
                 setSelectedGroup({name: group.name, id: group.id, desc: group.desc, cards: sortCardsByLocation(result.data)});
             });
         }
     }
 
     function updateGroup(change) {
+        console.log(change);
         Axios.post(url + '/db/updategroup?type=' + selectedGroupType + '&id=' + selectedGroup.id, change).then(result => {
             setSelectedGroup({
                 name: (change.hasOwnProperty('name') ? change.name : selectedGroup.name),
@@ -107,6 +112,10 @@ function Home(state) {
         }
     }
 
+    function hoverCard(e) {
+        
+    }
+
     return state.userName === '' ? 
     (
         <Redirect to='/login'></Redirect>
@@ -114,63 +123,75 @@ function Home(state) {
         <div className='Home'>
             <div className='layout'>
                 <div className='card-search flex-col'>
+                    <div></div>
                     <ul className='card-results'>
                         {
-                            cardResults.map((elem) => {
+                            cardResults.slice(0, cardResultsLimit).map(elem => {
                                 return (
-                                    <li key={elem.DetailID} draggable='true' onDrag={e => dragCard(e)}>{elem.CardName}</li>
+                                    <li key={elem.DetailID} draggable='true' onDrag={e => dragCard(e)} onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={elem.MultiverseID}>{elem.CardName}</li>
                                 );
                             })
                         }
-
                     </ul>
                     <div className='search-options'>
                         <input id='search_cardname' type='text' placeholder='Card Name' onChange={updateCardList}></input>
+                        <div className='result-limit'>
+                            <input type='number' value={cardResultsLimit} onChange={e => setCardResultsLimit(e.target.value)}></input>
+                            <p>{' Results'}</p>
+                        </div>
                     </div>
                 </div>
                 <div className='workspace flex-col'>
                     <div className='deck-info'>
-                        <input type='text' value={selectedGroup.name != null ? selectedGroup.name : 'None Selected'} readOnly={selectedGroup.name == null} onChange={e => {updateGroup({name: e.target.value})}}></input>
+                        <input type='text' value={selectedGroup.id !== 'none' ? selectedGroup.name : 'None Selected'} readOnly={selectedGroup.id === 'none'} onChange={e => {updateGroup({name: e.target.value})}}></input>
                         {
-                            selectedGroup.name != null ? <button onClick={e => deleteGroup(selectedGroup.id)}>DELETE</button> : ''
+                            selectedGroup.id !== 'none' ? <button onClick={e => deleteGroup(selectedGroup.id)}>DELETE</button> : ''
                         }
                         
                     </div>
-                    <div className='display-cards'> {/* TODO: Make sure to wrap this with an if to support Collections (just list selectedGroup.cards.map)*/}
-                        <div className='main-board' onDrop={e => addCard()} onDragOver={e => e.preventDefault()}>
-                            {
-                                Object.keys(selectedGroup.cards[0]).map(loc => {
-                                    if (loc !== 'sideboard' && loc !== '') return (
-                                        <div className='location'>
-                                            <h4 clasName='location-title'>{loc}</h4>
-                                            {
-                                                selectedGroup.cards[0][loc].map(card => {
-                                                    return (
-                                                        <div className='display-card' key={card.DetailID}>
-                                                            <p>{card.Quantity}x {card.CardName}</p>
-                                                        </div>
+                    {
+                        (selectedGroup.id !== 'none') ? (
+                            selectedGroupType === 'Decks' ? (
+                                <div className='display-cards'> {/* TODO: Make sure to wrap this with an if to support Collections (just list selectedGroup.cards.map)*/}
+                                    <div className='main-board' onDrop={e => addCard()} onDragOver={e => e.preventDefault()}>
+                                        {
+                                            Object.keys(selectedGroup.cards[0]).map(loc => {
+                                                if (loc !== 'sideboard' && loc !== '') return (
+                                                    <div className='location'>
+                                                        <h4 className='location-title'>{loc}</h4>
+                                                        {
+                                                            selectedGroup.cards[0][loc].map(card => {
+                                                                return (
+                                                                    <div className='display-card' key={card.DetailID}>
+                                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID}>{card.Quantity}x {card.CardName}</p>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        }
+                                                    </div>
                                                     );
-                                                })
-                                            }
-                                        </div>
-                                        );
-                                    else return '';
-                                })
-                            }
-                        </div>
-                        <div className='sideboard' onDrop={e => addCard('sideboard')} onDragOver={e => e.preventDefault()}>
-                            <h3>Sideboard</h3>
-                            {
-                                selectedGroup.cards[0].sideboard.map(card => {
-                                    return (
-                                        <div className='display-card' key={card.DetailID}>
-                                            <p>{card.Quantity}x {card.CardName}</p>
-                                        </div>
-                                    );
-                                })
-                            }
-                        </div>
-                    </div>
+                                                else return '';
+                                            })
+                                        }
+                                    </div>
+                                    <div className='sideboard' onDrop={e => addCard('sideboard')} onDragOver={e => e.preventDefault()}>
+                                        <h4>Sideboard</h4>
+                                        {
+                                            selectedGroup.cards[0].sideboard.map(card => {
+                                                return (
+                                                    <div className='display-card' key={card.DetailID}>
+                                                        <p onMouseOver={e => setHoveredImage(e.target.dataset.mid)} data-mid={card.MultiverseID}>{card.Quantity}x {card.CardName}</p>
+                                                    </div>
+                                                );
+                                            })
+                                        }
+                                    </div>
+                                </div>
+                            ) : (
+                                <p> Collection Display </p>
+                            )
+                        ) : <p>Please select a Deck or Collection</p>
+                    }
                     <div className='owned'>
                         <div className='type-selection'>
                             <p>{state.userName}'s </p>
@@ -190,6 +211,7 @@ function Home(state) {
                     </div>
                 </div>
                 <div className='extras-panel flex-col'>
+                    <img src={`https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${hoveredImage}&type=card`} alt=''></img>
                     <p>Recommendations</p>
                     {
                         recommendations.map(card => {

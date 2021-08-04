@@ -4,6 +4,15 @@ $accent: #a2a2a2;
 .Home {
     height: 100vh;
     background-color: $background;
+    opacity: 1.0;
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url('../public/eldrazi-background-transparent.png');
+    background-size: 100% 100%;
 
     .layout {
         display: flex;
@@ -27,6 +36,9 @@ $accent: #a2a2a2;
                 padding: 1rem;
                 list-style-type: none;
                 flex-grow: 1;
+                flex-basis: calc(15 * 2rem);
+                flex-grow: 0;
+                overflow-y: scroll;
 
                 li {
                     margin: 0.25rem;
@@ -35,6 +47,7 @@ $accent: #a2a2a2;
                     text-align: center;
                     background-color: #ccc;
                     cursor: pointer;
+                    flex: 1;
                 }
 
                 li:nth-child(even) {
@@ -47,6 +60,10 @@ $accent: #a2a2a2;
                 border: 1px solid green;
                 margin: 0.5rem;
                 padding: 1rem;
+
+                .result-limit p {
+                    display: inline;
+                }
             }
         }
 
@@ -69,6 +86,12 @@ $accent: #a2a2a2;
                 display: flex;
                 flex-direction: row;
 
+                h4 {
+                    text-align: center;
+                    background-color: lightgray;
+                    border-radius: 0.25rem;
+                }
+
                 .main-board {
                     flex-grow: 5;
                     display: flex;
@@ -78,22 +101,22 @@ $accent: #a2a2a2;
 
                     .location {
                         margin: 0.5rem;
-                        border: 1px solid orange;
+                        // border: 1px solid black;
                         padding: 0.5rem;
-
-                        h4 {
-                            text-align: center;
-                            background-color: lightgray;
-                            border-radius: 0.25rem;
-                        }
+                        border-radius: 0.5rem;
+                        background-color: #ddda;
+                        box-shadow: 3px 3px 10px #bbb;
                     }
                 }
 
                 .sideboard {
-                    border: 1px solid blue;
+                    // border: 1px solid blue;
                     flex-grow: 1;
                     margin: 0.5rem;
                     padding: 0.5rem;
+                    border-radius: 0.5rem;
+                    background-color: #ddda;
+                    box-shadow: 3px 3px 10px #bbb;
                 }
             }
 
@@ -144,6 +167,11 @@ $accent: #a2a2a2;
             border: 1px solid green;
             margin: 0.5rem;
             padding: 1rem;
+
+            img {
+                width: 15rem;
+                height: 21rem;
+            }
         }
     }
 }

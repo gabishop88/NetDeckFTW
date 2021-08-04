@@ -66,15 +66,14 @@ app.post('/db/adduser', (req, res) => {
 
 var cardsearch_err = [{DetailID: 123, CardName: 'Festive Elf', ManaCost: '4{G}{G}'}, {DetailID: 456, CardName: 'Santa\'s Helper', ManaCost: '4{G}{G}'}, {DetailID: 789, CardName: 'Gift Horse', ManaCost: '{1}{G}'}];
 app.post('/db/cardsearch', (req, res) => {
-    var q = 'SELECT DetailID, CardName, ManaCost FROM CardDetails ';
+    var q = 'SELECT DetailID, CardName, ManaCost, MAX(MultiverseID) FROM CardDetails NATURAL JOIN Cards GROUP BY DetailID, CardName, ManaCost ';
     if ('name' in req.body) {
         if (req.body.name == '') {
-            q = "SELECT DetailID, CardName, ManaCost, COUNT(DetailID) AS num_cards FROM CardDetails NATURAL JOIN DeckContains WHERE type NOT LIKE '%Basic%' GROUP BY DetailID ORDER BY num_cards DESC ";
+            q = "SELECT DetailID, CardName, ManaCost, MultiverseID, COUNT(DetailID) AS num_cards FROM (SELECT DetailID, CardName, ManaCost, MAX(MultiverseID) AS MultiverseID, `Type` FROM CardDetails NATURAL JOIN Cards GROUP BY DetailID, CardName, ManaCost) as temp NATURAL JOIN DeckContains WHERE `Type` NOT LIKE '%Basic%' GROUP BY DetailID, CardName, ManaCost, MultiverseID ORDER BY num_cards DESC ";
         } else {
-            q = q.concat('WHERE CardName LIKE \'%' + req.body.name + '%\' ');
+            q = q.concat(`HAVING CardName LIKE '%${req.body.name}%' `);
         }
     }
-    q = q.concat('LIMIT 10');
     
     db.query(q, [], (err, result) => {
         if (err) res.send(cardsearch_err);
@@ -98,9 +97,9 @@ app.get('/db/groupcards', (req, res) => {
     var id = req.query.id;
     var q = '';
     if (req.query.type == 'Decks') {
-        q = "SELECT CardName, DetailID, Quantity, Location FROM DeckContains NATURAL JOIN CardDetails WHERE DeckID=?";
+        q = "SELECT CardName, DetailID, Quantity, Location, MAX(MultiverseID) AS MultiverseID FROM DeckContains NATURAL JOIN CardDetails NATURAL JOIN Cards WHERE DeckID=? GROUP BY CardName, DetailID, Quantity, Location";
     } else if (req.query.type == 'Collections') {
-        q = "SELECT CardName, CardID, Quantity, Foil FROM CollectionContains NATURAL JOIN Cards NATURAL JOIN CardDetails WHERE CollectionID=?";
+        q = "SELECT CardName, CardID, Quantity, Foil, MultiverseID FROM CollectionContains NATURAL JOIN Cards NATURAL JOIN CardDetails WHERE CollectionID=?";
     }
     db.query(q, [id], (err, result) => {
         if (err) res.send([]);
