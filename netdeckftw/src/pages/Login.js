@@ -11,14 +11,8 @@ function Login(state) {
     const [userMatch, setUserMatch] = useState(false);
 
     function changeUsername(e) {
-        Axios.get(url + '/db/checkuser?username=' + e.target.value).then((response) => {
-            setUserMatch(response.length);
-            var button = document.getElementById('login_submit');
-            if (response.length === 0) {
-                button.innerHTML = "Sign Up";
-            } else {
-                button.innerHTML = "Log In";
-            }
+        Axios.get(`${url}/db/checkuser?username=${e.target.value}`).then((response) => {
+            setUserMatch(response.data.length);
         });
     }
 
@@ -43,8 +37,8 @@ function Login(state) {
     }
 
     function submitLogin(e) {
-        state.setUserName('Graham');
-        return;
+        // state.setUserName('Graham');
+        // return;
         var elems = e.target.parentElement.children;
         var username = elems[1].value;
         var password = elems[2].value;
@@ -89,7 +83,7 @@ function Login(state) {
                     <input type='text' placeholder='Username' onChange={changeUsername}></input>
                     <input type='password' id='password_input' placeholder='Password' onChange={changePassword} onMouseOver={e => e.target.type = 'text'} onMouseLeave={e => e.target.type = 'password'}></input>
                     <input type='password' id='verify_password' placeholder='Verify Password' onChange={checkPasswordMatch} onMouseOver={e => e.target.type = 'text'} onMouseLeave={e => e.target.type = 'password'}></input>
-                    <button id='login_submit' className='submit' onClick={submitLogin}>Log In</button>
+                    <button id='login_submit' className='submit' onClick={submitLogin}>{userMatch ? 'Log In' : 'Sign Up'}</button>
                 </div>
             </div>
     ) : (

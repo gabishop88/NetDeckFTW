@@ -6,13 +6,19 @@ const url = 'http://localhost:3002';
 
 function Home(state) {
 
+    // Make sure that you can't edit other people's decks
+    const utilitySections = ['Card Recommendations', 'Unowned Cards', 'Similar Decks'];
+
     const [cardResults, setCardResults] = useState([]);
     const [cardResultsLimit, setCardResultsLimit] = useState(15);
     const [ownedGroups, setOwnedGroups] = useState([]);
     const [selectedGroupType, setSelectedGroupType] = useState('Decks');
     const [recommendations, setRecommendations] = useState([]);
+    const [unownedCards, setUnownedCards] = useState([]);
+    const [similarDecks, setSimilarDecks] = useState([]);
     const [dragging, setDragging] = useState('');
     const [hoveredImage, setHoveredImage] = useState('');
+    const [selectedUtility, setSelectedUtility] = useState(0);
 
     function sortCardsByLocation(cards) {
         if (selectedGroupType === 'Collections') return cards;
@@ -56,6 +62,23 @@ function Home(state) {
         }
         getOwned();
     }, [selectedGroupType, state.userName, selectedGroup]);
+
+    useEffect(() => {
+        // Update unownedCards
+        async function updateUtils() {
+            if (selectedGroupType === 'Decks') {
+                Axios.get(`${url}/db/getunowned/${state.userName}/${selectedGroup.id}`).then(result => {
+                    // console.log(result.data[0]);
+                    setUnownedCards(result.data[0]);
+                });
+                Axios.get(`${url}/db/getsimilardecks/${selectedGroup.id}/none`).then(result => {
+                    console.log(result.data[0]);
+                    setSimilarDecks(result.data[0]);
+                });
+            } else setUnownedCards([]);
+        }
+        updateUtils();
+    }, [selectedGroup, selectedGroupType, state.userName]);
 
     function selectGroup(group) {
         if (group.id === 'creator') {
@@ -125,8 +148,9 @@ function Home(state) {
         }
     }
 
-    function moveCard(loc = null) {
-        
+    function moveCard(loc) {
+        removeCard();
+        addCard(loc);
     }
 
     return state.userName === '' ? 
@@ -237,13 +261,27 @@ function Home(state) {
                 </div>
                 <div className='extras-panel flex-col'>
                     <img src={`https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${hoveredImage}&type=card`} alt=''></img>
-                    <p>Recommendations</p>
+                    <h3 className='utility-title' onClick={e => setSelectedUtility((selectedUtility + 1) % utilitySections.length)}>{utilitySections[selectedUtility]}</h3>
                     {
-                        recommendations.map(card => {
-                            return (
-                                <li key={card.DetailID}>{card.CardName}</li>
-                            );
-                        })
+                        selectedUtility === 0 ? (
+                            recommendations.map(card => {
+                                return (
+                                    <li key={card.DetailID}>{card.CardName}</li>
+                                );
+                            })
+                        ) : (selectedUtility === 1) ? (
+                            unownedCards.map(card => {
+                                return (
+                                    <li key={card.DetailID}>{card.Needed} {card.CardName}</li>
+                                );
+                            })
+                        ) : (
+                            similarDecks.map(deck => {
+                                return (
+                                    <li key={deck.DeckID} onClick={e => selectGroup({name: deck.DeckName, id: deck.DeckID, desc: ''})}>{deck.DeckName} ({deck.Format}) By {deck.Owner}<br></br>{deck.DeckHas}% Match</li> // TODO: change to a deck thing
+                                );
+                            })
+                        )
                     }
                 </div>
             </div>

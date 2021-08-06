@@ -139,7 +139,6 @@ $accent: #a2a2a2;
                     .selected-group {
                         text-decoration: underline;
                         margin-left: 0.5rem;
-                        background-color: white;
                         border-radius: 4px;
 
                         &:hover {
@@ -177,6 +176,11 @@ $accent: #a2a2a2;
             img {
                 width: 15rem;
                 height: 21rem;
+            }
+
+            .utility-title:hover {
+                border-radius: 8px;
+                background-color: lightgray;
             }
         }
     }

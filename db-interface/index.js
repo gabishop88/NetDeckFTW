@@ -24,7 +24,6 @@ var test_success = '<h1>Database connected.</h1>';
 app.get('/', (req, res) => {
     const query = "SELECT COUNT(*) AS count FROM `Users`";
     db.query(query, (err, result) => {
-        console.log(err);
         if (err) res.send(test_err);
         else res.send(test_success);
     })
@@ -37,7 +36,7 @@ app.get('/db/checkuser', (req, res) => {
     const q = "SELECT `UserName` FROM `Users` WHERE `UserName`=?";
     db.query(q, req.query.username, (err, result) => {
         if (err) res.send(checkuser_err);
-        res.send(result.data);
+        res.send(result);
     })
 });
 
@@ -109,7 +108,6 @@ app.get('/db/groupcards', (req, res) => {
 
 app.post('/db/updategroup', (req, res) => {
     var q = '';
-    console.log("Updating a group.");
     if (req.query.type == "Decks") {
         let translator = {
             visibility: 'Visibility',
@@ -147,9 +145,7 @@ app.post('/db/addgroup', (req, res) => {
     let groupid = uuidv4();
     let type = req.body.type.slice(0, -1);
     const q = `INSERT INTO ${type}s (${type}ID, Owner) VALUES (?, ?)`;
-    console.log('adding a new deck.');
     db.query(q, [groupid, req.body.owner], (err, result) => {
-        console.log(err);
         if (err) res.send("Creation Failed");
         else {
             db.query(`SELECT ${type}ID AS id, ${type}Name AS name, Description AS 'desc' FROM ${type}s WHERE ${type}ID=?`, [groupid], (err, result) => {
@@ -192,9 +188,8 @@ app.post('/db/addcard/:groupID/:card', (req, res) => {
     if (type === 'Decks') {
         q = `CALL ins_deck_det_ID(?, ?, '${loc}')`;
     } else if (type === 'Collections') {
-        q = 'CALL ins_coll_cardID(?, ?)';
+        q = 'CALL ins_coll_det_id(?, ?)';
     }
-    console.log(`Add ${cardid} to ${type} ${groupid} at ${loc}`);
     if (q !== '') db.query(q, [groupid, cardid], (err, result) => {
         if (err) res.send('Insert Failed');
         else res.send('Insert Successful');
@@ -218,6 +213,20 @@ app.delete('/db/removecard/:groupid/:card', (req, res) => {
         else res.send('Remove successful');
     });
 });
+
+app.get('/db/getunowned/:owner/:deckID', (req, res) => {
+    db.query('CALL find_needed(?, ?, @percentOwned)', [req.params.owner, req.params.deckID], (err, result) => {
+        if (err) res.send([]);
+        else res.send(result);
+    });
+});
+
+app.get('/db/getsimilardecks/:deckID/:format', (req, res) => {
+    db.query('CALL similar_decks(?, ?)', [req.params.deckID, req.params.format], (err, result) => {
+        if (err) res.send([]);
+        else res.send(result);
+    });
+})
 
 /** ========== Start Server ========== */
 
